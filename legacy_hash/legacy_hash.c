@@ -2,7 +2,8 @@
 #include <Python.h>
 
 /*
- * Implementation copied from Python 3.7.2 implementation of tuple hash.
+ * Implementation copied from Python 3.7.2 implementation of tuple hash. The only modification is that in
+ * case of a tuple inside the tuple, it uses the same hash recursively.
  * This implementation has been changed because it contains collisions:
  * https://github.com/python/cpython/pull/9471
  * This is reimplemented here in case matching tuples to hashes that were created in an old Python version
@@ -19,7 +20,12 @@ tuplehashImplementation(PyTupleObject *v)
     x = 0x345678UL;
     p = v->ob_item;
     while (--len >= 0) {
-        y = PyObject_Hash(*p++);
+        if (PyTuple_Check(*p)) {
+            y = tuplehashImplementation((PyTupleObject *) *p);
+        } else {
+            y = PyObject_Hash(*p);
+        }
+        p++;
         if (y == -1)
             return -1;
         x = (x ^ y) * mult;
